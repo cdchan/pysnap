@@ -173,6 +173,22 @@ class Snapchat(object):
                 stories.append(obj)
         return stories
 
+    def get_my_story(self, update_timestamp=0):
+        """Get user's "My Story"
+        Returns a list of snaps in My Story
+
+        :param update_timestamp: Optional timestamp (epoch in seconds) to limit
+                                 updates
+        """
+        r = self._request("stories", {
+            'username': self.username,
+            'update_timestamp': update_timestamp
+        })
+        result = r.json()
+        if 'auth_token' in result:
+            self.auth_token = result['auth_token']
+        return result['my_stories']
+
     def get_story_blob(self, story_id, story_key, story_iv):
         """Get the image or video of a given snap
         Returns the decrypted image or a video of the given snap or None if
@@ -202,6 +218,19 @@ class Snapchat(object):
         if any((is_image(data), is_video(data), is_zip(data))):
             return data
         return None
+
+    def get_story_thumbnail(self, story_id, story_key, thumbnail_iv):
+        """Get the thumbnail image of a given snap
+        Returns the decrypted image the given snap
+
+        :param story_id: Media id to fetch
+        :param story_key: Encryption key of the story
+        :param story_iv: Encryption IV of the thumbnail
+        """
+        r = self._request('story_thumbnail', {'story_id': story_id},
+                          raise_for_status=False, req_type='get')
+        data = decrypt_story(r.content, story_key, thumbnail_iv)
+        return data  # this fails the is_image check but is a png
 
     def send_events(self, events, data=None):
         """Send event data
